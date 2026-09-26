@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catsuc 3D Preview</title>
+<style>
+  :root { --bg:#eef0f5; --panel:#ffffffe6; --text:#1b1d24; --muted:#666c7a; --accent:#284bf0; }
+  * { box-sizing:border-box; }
+  html,body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; overflow:hidden; }
+  #app { position:fixed; inset:0; }
+  .panel { position:fixed; top:16px; left:16px; width:260px; max-width:calc(100% - 32px); background:var(--panel); backdrop-filter:blur(8px); border-radius:12px; padding:16px; box-shadow:0 4px 24px #0002; font-size:14px; }
+  .panel h1 { font-size:16px; margin:0 0 12px; }
+  label { display:flex; justify-content:space-between; align-items:center; margin:10px 0 4px; }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  input[type=color] { width:40px; height:26px; border:none; background:none; padding:0; cursor:pointer; }
+  .row { display:flex; gap:8px; margin-top:12px; }
+  button { flex:1; padding:8px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-weight:600; cursor:pointer; }
+  button.alt { background:#e3e6ee; color:var(--text); }
+  .dims { margin-top:12px; padding-top:10px; border-top:1px solid #0001; color:var(--muted); font-size:13px; }
+  .hint { position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:var(--panel); padding:8px 14px; border-radius:999px; font-size:13px; color:var(--muted); white-space:nowrap; }
+  @media (max-width:600px){ .panel{ top:auto; bottom:56px; } .hint{ font-size:11px; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div class="panel">
+  <h1>Catsuc — Preview 3D</h1>
+  <label>Largura <span id="wVal"></span></label>
+  <input id="width" type="range" min="50" max="400" step="5" value="150">
+  <label>Espessura <span id="dVal"></span></label>
+  <input id="depth" type="range" min="1" max="20" step="0.5" value="5">
+  <label>Chanfro nas bordas <span id="bVal"></span></label>
+  <input id="bevel" type="range" min="0" max="1" step="0.1" value="0.3">
+  <label>Cor do filamento <input id="color" type="color" value="#284bf0"></label>
+  <label>Mesa de impressão <input id="bed" type="checkbox" checked></label>
+  <label>Girar automaticamente <input id="spin" type="checkbox"></label>
+  <div class="row">
+    <button id="front">Frente</button>
+    <button id="reset" class="alt">Resetar vista</button>
+  </div>
+  <div class="dims" id="dims"></div>
+</div>
+
+<div class="hint">Arraste para girar · Scroll/pinça para zoom · Botão direito (ou 2 dedos) para mover</div>
+
+<svg id="logo-svg" style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <path fill="#000" fill-rule="evenodd" d="M200.0,57.0 L58.0,57.0 58.0,56.0 114.0,-0.0 115.0,-0.5 200.0,-0.5 200.7,0.0 200.7,56.0ZM815.0,224.0 L814.0,224.7 745.0,224.7 735.0,223.3 727.0,220.3 720.0,216.3 712.7,209.0 708.5,202.0 706.6,197.0 704.8,190.0 704.1,180.0 704.1,96.0 703.0,95.3 678.0,95.3 677.2,94.0 677.5,58.0 703.0,57.7 704.1,57.0 704.1,0.0 705.0,-0.5 742.0,-0.5 742.6,0.0 743.0,57.5 814.7,58.0 814.7,95.0 744.0,95.3 742.6,96.0 742.6,172.0 743.0,176.0 744.7,181.0 748.0,184.5 752.0,186.5 758.0,187.3 814.0,187.3 815.0,187.9ZM375.0,229.1 L366.0,229.5 357.0,229.1 349.0,228.3 340.0,226.4 333.0,224.3 322.0,219.4 315.0,215.2 307.0,209.3 298.7,201.0 294.6,196.0 286.7,183.0 283.6,176.0 280.7,167.0 277.8,151.0 277.5,132.0 279.8,118.0 281.7,111.0 285.7,101.0 288.8,95.0 294.7,86.0 305.0,74.7 314.0,67.7 319.0,64.7 332.0,58.6 342.0,55.6 352.0,53.8 361.0,53.0 373.0,53.3 389.0,55.6 403.0,60.5 416.0,67.6 426.0,75.6 432.3,82.0 436.3,87.0 440.2,93.0 444.4,101.0 447.2,108.0 450.4,119.0 450.0,119.6 449.0,119.7 410.0,119.6 404.3,109.0 399.2,103.0 395.0,99.6 391.0,96.7 385.0,93.9 378.0,91.6 373.0,90.6 358.0,90.7 353.0,91.6 346.0,93.8 337.0,98.7 333.0,101.8 327.8,107.0 324.8,111.0 319.6,121.0 316.8,131.0 316.2,142.0 316.6,150.0 317.8,156.0 319.7,162.0 321.5,166.0 323.6,170.0 328.7,177.0 337.0,184.3 347.0,189.3 354.0,191.4 360.0,192.3 366.0,192.5 377.0,191.4 386.0,188.4 390.0,186.4 396.0,182.3 401.0,177.6 405.4,172.0 410.0,162.5 449.0,162.3 450.0,162.4 450.4,163.0 447.4,174.0 443.2,184.0 436.5,195.0 427.0,206.0 417.0,214.3 410.0,218.5 402.0,222.4 390.0,226.4 382.0,228.2ZM559.0,229.2 L545.0,229.4 535.0,228.2 524.0,225.2 513.0,220.4 505.0,215.4 494.0,205.6 486.7,197.0 481.7,189.0 476.7,178.0 472.6,164.0 470.7,151.0 470.4,137.0 471.7,123.0 473.6,114.0 476.8,104.0 480.9,95.0 488.6,83.0 496.0,74.7 503.0,68.7 509.0,64.6 517.0,60.5 530.0,55.7 541.0,53.7 552.0,53.0 563.0,53.8 576.0,56.5 586.0,60.6 596.0,66.7 602.0,71.9 610.0,80.7 611.3,80.0 611.3,59.0 612.0,57.7 649.0,57.7 649.5,59.0 649.5,224.0 649.0,224.7 612.0,224.7 611.3,224.0 611.3,201.0 610.0,200.5 603.0,208.8 597.0,214.5 587.0,221.2 580.0,224.4 571.0,227.3ZM1300.0,229.1 L1290.0,229.5 1281.0,229.1 1269.0,227.4 1261.0,225.2 1258.0,224.3 1245.0,218.4 1232.0,209.4 1223.6,201.0 1219.6,196.0 1211.6,183.0 1207.8,174.0 1205.6,167.0 1202.7,151.0 1202.6,131.0 1204.7,118.0 1206.7,111.0 1210.6,101.0 1213.7,95.0 1219.7,86.0 1223.8,81.0 1230.0,74.7 1242.0,65.7 1250.0,61.5 1257.0,58.6 1267.0,55.6 1277.0,53.8 1286.0,53.0 1298.0,53.3 1314.0,55.6 1328.0,60.6 1341.0,67.6 1352.0,76.6 1357.3,82.0 1361.3,87.0 1365.1,93.0 1369.3,101.0 1372.1,108.0 1375.4,119.0 1374.0,119.7 1335.0,119.6 1329.3,109.0 1324.0,103.0 1320.0,99.6 1316.0,96.8 1309.0,93.6 1303.0,91.6 1298.0,90.6 1283.0,90.7 1278.0,91.6 1271.0,93.8 1262.0,98.6 1258.0,101.7 1252.7,107.0 1249.7,111.0 1244.5,121.0 1241.7,131.0 1241.1,142.0 1241.7,151.0 1242.7,156.0 1244.6,162.0 1247.5,168.0 1253.7,177.0 1262.0,184.4 1269.0,188.1 1275.0,190.4 1285.0,192.3 1295.0,192.3 1302.0,191.3 1313.0,187.4 1321.0,182.3 1326.5,177.0 1330.3,172.0 1335.0,162.4 1374.0,162.3 1375.4,163.0 1371.3,177.0 1365.4,189.0 1358.3,199.0 1348.0,209.4 1337.0,217.3 1327.0,222.4 1315.0,226.3 1307.0,228.2ZM200.0,229.5 L115.0,229.5 114.0,229.0 58.0,173.0 57.0,174.0 57.0,229.0 56.0,229.5 0.0,229.5 -0.5,229.0 -0.5,115.0 -0.0,114.0 56.0,58.0 57.0,58.0 57.0,171.0 58.0,172.0 200.0,172.0 200.7,173.0 200.7,229.0ZM948.0,224.2 L940.0,224.7 844.0,224.7 843.3,224.0 843.3,188.0 844.0,187.5 941.0,187.4 945.0,186.2 947.0,184.5 949.1,182.0 950.4,178.0 950.4,174.0 949.5,171.0 947.0,167.5 944.0,165.8 870.0,149.2 863.0,146.3 856.0,142.3 850.0,137.4 846.9,134.0 842.6,128.0 838.8,120.0 836.7,110.0 836.8,99.0 839.6,88.0 841.7,83.0 844.7,78.0 851.2,71.0 858.0,65.6 866.0,61.6 871.0,59.9 884.0,57.8 979.3,58.0 979.5,94.0 979.0,95.3 888.0,95.3 885.0,95.6 882.0,96.6 879.0,99.4 877.7,102.0 877.3,106.0 877.9,110.0 879.8,113.0 883.0,115.4 952.0,130.8 959.0,132.8 968.0,136.7 975.0,141.7 981.3,148.0 985.4,154.0 989.3,163.0 990.4,168.0 991.3,176.0 990.3,186.0 989.3,190.0 985.0,200.0 979.4,208.0 975.0,212.4 970.0,216.1 965.0,219.2 957.0,222.3ZM1103.0,229.1 L1092.0,229.4 1078.0,228.2 1069.0,226.3 1054.0,220.4 1043.0,213.3 1036.0,206.8 1031.6,202.0 1023.6,189.0 1018.6,176.0 1016.6,167.0 1015.5,159.0 1015.1,148.0 1015.1,59.0 1016.0,58.0 1053.0,58.0 1053.6,59.0 1053.7,149.0 1054.7,159.0 1055.6,163.0 1057.8,169.0 1061.7,176.0 1065.8,181.0 1071.0,185.4 1076.0,188.4 1084.0,191.4 1095.0,192.5 1104.0,191.6 1109.0,190.2 1116.0,187.0 1120.0,184.4 1125.0,179.8 1130.1,173.0 1134.4,163.0 1136.2,154.0 1136.5,149.0 1136.5,59.0 1137.0,58.0 1174.0,58.0 1175.0,58.7 1175.1,149.0 1174.4,161.0 1173.3,168.0 1169.4,182.0 1165.3,191.0 1158.1,202.0 1152.5,208.0 1145.0,214.4 1135.0,220.4 1126.0,224.4 1116.0,227.2ZM567.7,192.0 L572.0,191.4 579.0,189.3 586.0,186.0 594.0,180.4 599.3,175.0 602.2,171.0 607.4,161.0 610.1,151.0 610.9,141.0 610.2,132.0 607.4,121.0 602.3,111.0 597.0,104.5 589.0,97.7 579.0,92.6 572.0,90.6 561.0,89.5 555.0,89.7 549.0,90.6 537.0,94.6 529.0,99.6 520.4,108.0 516.9,113.0 512.5,122.0 509.7,134.0 509.6,146.0 510.6,153.0 512.9,161.0 516.8,169.0 522.9,177.0 530.0,183.2 539.0,188.3 548.0,191.2 555.0,192.3Z"/>
+</svg>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { SVGLoader } from 'three/addons/loaders/SVGLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const SRC_W = 1376, SRC_H = 230; // dimensões do logo original (px)
+const $ = id => document.getElementById(id);
+
+// --- cena ---
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+$('app').appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xeef0f5);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 30;
+controls.maxDistance = 1500;
+
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(-150, 300, 250);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left:-300, right:300, top:300, bottom:-300, near:1, far:1000 });
+scene.add(sun, new THREE.AmbientLight(0xffffff, 0.3));
+
+// mesa de impressão (unidades = mm)
+const bed = new THREE.Group();
+const plate = new THREE.Mesh(new THREE.BoxGeometry(450, 4, 450), new THREE.MeshStandardMaterial({ color:0x2a2d33, roughness:0.6, metalness:0.2 }));
+plate.position.y = -2; plate.receiveShadow = true;
+const grid = new THREE.GridHelper(450, 45, 0x555a66, 0x3a3e46);
+grid.position.y = 0.05;
+bed.add(plate, grid);
+scene.add(bed);
+
+// --- logo ---
+const shapes = new SVGLoader().parse($('logo-svg').outerHTML).paths.flatMap(p => SVGLoader.createShapes(p));
+const material = new THREE.MeshPhysicalMaterial({ color:$('color').value, roughness:0.45, metalness:0, clearcoat:0.15 });
+const logo = new THREE.Mesh(undefined, material);
+logo.castShadow = logo.receiveShadow = true;
+scene.add(logo);
+
+function build() {
+  const widthMM = +$('width').value, depthMM = +$('depth').value, bevelMM = +$('bevel').value;
+  const s = widthMM / SRC_W;
+  const b = Math.min(bevelMM, depthMM / 3) / s; // chanfro em px do SVG
+  const geo = new THREE.ExtrudeGeometry(shapes, {
+    depth: Math.max(depthMM / s - 2 * b, 0.01), bevelEnabled: b > 0,
+    bevelThickness: b, bevelSize: b, bevelOffset: -b, bevelSegments: 3, curveSegments: 8,
+  });
+  // SVG tem Y para baixo: centraliza, inverte Y e escala para mm
+  geo.translate(-SRC_W / 2, -SRC_H / 2, b);
+  geo.scale(s, -s, s);
+  geo.computeVertexNormals();
+  if (logo.geometry) logo.geometry.dispose();
+  logo.geometry = geo;
+
+  // em pé sobre a mesa
+  logo.rotation.set(0, 0, 0);
+  logo.position.set(0, SRC_H * s / 2, -depthMM / 2);
+
+  $('wVal').textContent = widthMM + ' mm';
+  $('dVal').textContent = depthMM + ' mm';
+  $('bVal').textContent = bevelMM + ' mm';
+  $('dims').innerHTML = `Tamanho final: <b>${widthMM} × ${(SRC_H * s).toFixed(1)} × ${depthMM} mm</b><br>(L × A × P)`;
+}
+
+function frame(front) {
+  const w = +$('width').value, h = w * SRC_H / SRC_W;
+  const dist = w * 1.6;
+  controls.target.set(0, h / 2, 0);
+  camera.position.set(front ? 0 : -w * 0.55, h / 2 + (front ? 0 : w * 0.35), front ? dist : dist * 0.85);
+  controls.update();
+}
+
+['width','depth','bevel'].forEach(id => $(id).addEventListener('input', build));
+$('width').addEventListener('change', () => frame(false));
+$('color').addEventListener('input', e => material.color.set(e.target.value));
+$('bed').addEventListener('change', e => bed.visible = e.target.checked);
+$('spin').addEventListener('change', e => controls.autoRotate = e.target.checked);
+$('front').onclick = () => frame(true);
+$('reset').onclick = () => frame(false);
+
+function resize() {
+  renderer.setSize(innerWidth, innerHeight);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+
+build(); resize(); frame(false);
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+</script>
+</body>
+</html>
